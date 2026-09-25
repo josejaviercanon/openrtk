@@ -6,15 +6,27 @@ A lightweight OpenCode plugin that intercepts shell commands and pipes them thro
 
 ## Prerequisites
 
-Install RTK (note: `cargo install rtk` installs an unrelated crate):
+The plugin needs the `rtk` binary in `PATH`. Two options:
 
-```bash
-cargo install --git https://github.com/rtk-ai/rtk
-```
+- Install the full offline package below — it bundles `rtk` and sets `PATH` for you.
+- Install RTK manually (note: `cargo install rtk` installs an unrelated crate):
+
+  ```bash
+  cargo install --git https://github.com/rtk-ai/rtk
+  ```
 
 ## Installation
 
 The plugin supports OpenCode 2 (`setup`/`ctx.shell.hook("create.before")`) and falls back to OpenCode 1 (`server`/`tool.execute.before`). It has no runtime dependencies, so OpenCode loads `src/index.ts` directly — no build and no `npm install` on the target machine.
+
+### Full offline package (no Cargo, no network)
+
+`npm run dist` builds `dist/openrtk-full-<version>-rtk<rtk-version>-win-x64.zip`. It ships the plugin, the current `rtk` executable, `rtk-version.txt` and the installers. On the target machine:
+
+1. Extract the zip.
+2. Double-click `install.cmd` (or run `node scripts/install-full.mjs`).
+
+The installer copies the plugin into `~/.config/opencode/plugins/openrtk/`, copies the bundled binary to `bin/` next to it, and appends that `bin` directory to the user `PATH`. No Cargo, npm install, network access or admin rights are needed. Restart OpenCode afterwards; open a new terminal so the `PATH` change applies.
 
 ### Offline package (recommended for other local machines)
 
@@ -77,6 +89,7 @@ npm install       # development dependencies
 npm test          # compile with tsc and run node:test
 npm run build     # emit lib/ with declarations (optional)
 npm run bundle    # emit a single-file dist/openrtk.js with esbuild
+npm run dist      # full self-contained package (plugin + rtk) in dist/
 ```
 
 `npm test` writes compiled test output to `test-lib/` and runs it with Node's built-in test runner, so no extra test framework is required.

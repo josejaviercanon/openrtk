@@ -1,17 +1,44 @@
 import type { Plugin } from "@opencode/plugin"
 import { execFile } from "node:child_process"
+import { existsSync } from "node:fs"
+import { delimiter, dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { rewrite } from "./rewrite.js"
 
-/** True when the `rtk` binary is installed and runs. */
-function rtkInstalled(): Promise<boolean> {
+const RTK_NAME = process.platform === "win32" ? "rtk.exe" : "rtk"
+
+/** True when a binary exists and runs `--version` without error. */
+function runs(bin: string): Promise<boolean> {
   return new Promise((resolve) => {
-    execFile("rtk", ["--version"], (error) => resolve(!error))
+    execFile(bin, ["--version"], (error) => resolve(!error))
   })
 }
 
+/**
+ * Locate the rtk binary: PATH first, then the copy bundled with the plugin
+ * package (`bin/` next to the plugin files, or one level up for `src/`).
+ * When only the bundled copy runs, its directory is prepended to this
+ * process's PATH so the shells OpenCode spawns resolve `rtk` in rewritten
+ * commands.
+ */
+async function resolveRtk(): Promise<string | null> {
+  if (await runs("rtk")) return "rtk"
+
+  const moduleDir = dirname(fileURLToPath(import.meta.url))
+  const candidates = [join(moduleDir, "bin", RTK_NAME), join(moduleDir, "..", "bin", RTK_NAME)]
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) continue
+    if (!(await runs(candidate))) continue
+    process.env.PATH = `${dirname(candidate)}${delimiter}${process.env.PATH ?? ""}`
+    return candidate
+  }
+
+  return null
+}
+
 async function setup(ctx: Plugin.Context): Promise<void> {
-  if (!(await rtkInstalled())) {
-    console.warn("[openrtk] rtk binary not found in PATH, plugin disabled")
+  if (!(await resolveRtk())) {
+    console.warn("[openrtk] rtk binary not found in PATH or plugin bin/, plugin disabled")
     return
   }
 
@@ -33,11 +60,9 @@ interface V1BeforeOutput {
   args?: Record<string, unknown>
 }
 
-export const rtkPlugin = async ({ $ }: { $: V1Shell }) => {
-  try {
-    await $`which rtk`.quiet()
-  } catch {
-    console.warn("[openrtk] rtk binary not found in PATH, plugin disabled")
+export const rtkPlugin = async (_ctx: { $: V1Shell }) => {
+  if (!(await resolveRtk())) {
+    console.warn("[openrtk] rtk binary not found in PATH or plugin bin/, plugin disabled")
     return {}
   }
 
