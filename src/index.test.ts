@@ -6,6 +6,8 @@ import { after, before, describe, test } from "node:test"
 import pluginDefault, { rtkPlugin } from "./index.js"
 import { rewrite } from "./rewrite.js"
 
+const win32 = process.platform === "win32"
+
 describe("rewrite", () => {
   describe("git commands", () => {
     test("rewrites git status", () => {
@@ -94,16 +96,27 @@ describe("rewrite", () => {
       assert.equal(rewrite("rg pattern"), "rtk rg pattern")
     })
 
-    test("rewrites ls", () => {
-      assert.equal(rewrite("ls -la"), "rtk ls -la")
+    test("rewrites ls on POSIX, leaves it untouched on Windows", () => {
+      assert.equal(rewrite("ls -la"), win32 ? null : "rtk ls -la")
     })
 
-    test("rewrites tree", () => {
-      assert.equal(rewrite("tree src/"), "rtk tree src/")
+    test("rewrites tree on POSIX, leaves it untouched on Windows", () => {
+      assert.equal(rewrite("tree src/"), win32 ? null : "rtk tree src/")
     })
 
-    test("rewrites find", () => {
-      assert.equal(rewrite("find . -name '*.ts'"), "rtk find . -name '*.ts'")
+    test("rewrites find on POSIX, leaves it untouched on Windows", () => {
+      assert.equal(rewrite("find . -name '*.ts'"), win32 ? null : "rtk find . -name '*.ts'")
+    })
+
+    test("rewrites diff on POSIX, leaves it untouched on Windows", () => {
+      assert.equal(rewrite("diff a.txt b.txt"), win32 ? null : "rtk diff a.txt b.txt")
+    })
+
+    test("compound command keeps ls untouched on Windows but still rewrites git", () => {
+      assert.equal(
+        rewrite("git status && ls -la"),
+        win32 ? "rtk git status && ls -la" : "rtk git status && rtk ls -la"
+      )
     })
   })
 
@@ -228,7 +241,9 @@ describe("rewrite", () => {
     test("supports ||, ; and pipes", () => {
       assert.equal(
         rewrite("git fetch || git pull; ls | grep foo"),
-        "rtk git fetch || rtk git pull; rtk ls | rtk grep foo",
+        win32
+          ? "rtk git fetch || rtk git pull; ls | rtk grep foo"
+          : "rtk git fetch || rtk git pull; rtk ls | rtk grep foo",
       )
     })
 
