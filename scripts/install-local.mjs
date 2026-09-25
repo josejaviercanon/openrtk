@@ -26,7 +26,7 @@ const configDir =
 const target = join(configDir, "plugins", "openrtk")
 
 await mkdir(target, { recursive: true })
-for (const entry of ["src", "package.json", "opencode.md"]) {
+for (const entry of ["index.ts", "src", "package.json", "opencode.md"]) {
   await cp(join(root, entry), join(target, entry), { recursive: true })
 }
 

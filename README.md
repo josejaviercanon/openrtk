@@ -19,8 +19,8 @@ The plugin supports OpenCode 2 (`setup`/`ctx.shell.hook("create.before")`) and f
 ### Offline package (recommended for other local machines)
 
 ```bash
-npm pack                     # produces openrtk-0.2.0.tgz
-tar -xzf openrtk-0.2.0.tgz
+npm pack                     # produces openrtk-0.2.1.tgz
+tar -xzf openrtk-0.2.1.tgz
 node package/scripts/install-local.mjs
 ```
 
