@@ -95,6 +95,20 @@ const RULES: [RegExp, (cmd: string) => string][] = [
 ]
 
 /**
+ * Rules that must not run on Windows PowerShell. These names are shell aliases
+ * (`ls` -> Get-ChildItem, `diff` -> Compare-Object) or Windows tools with
+ * different names/syntax (`tree.com`, `find.exe`). The rtk proxy subcommands
+ * spawn the Unix binaries, which do not exist on Windows, so rewriting them
+ * breaks commands that worked before.
+ */
+const WIN32_SKIP_PATTERNS: RegExp[] = [
+  /^ls(\s|$)/,
+  /^tree(\s|$)/,
+  /^find\s+/,
+  /^diff\s+/,
+]
+
+/**
  * Split a command on top-level separators (`&&`, `||`, `;`, `|`), ignoring any
  * that appear inside single or double quotes. The result interleaves segments
  * (even indices) and separators (odd indices), so joining it reproduces the
@@ -180,6 +194,12 @@ function rewriteSegment(segment: string): string | null {
   const envMatch = segment.match(ENV_PREFIX_RE)
   const envPrefix = envMatch ? envMatch[0] : ""
   const body = envPrefix ? segment.slice(envPrefix.length) : segment
+
+  // Windows PowerShell aliases and Windows tools (ls, tree, find, diff) must
+  // not be rewritten: the rtk proxy would spawn Unix binaries that do not exist.
+  if (process.platform === "win32" && WIN32_SKIP_PATTERNS.some((pattern) => pattern.test(body))) {
+    return null
+  }
 
   for (const [pattern, rewriter] of RULES) {
     if (pattern.test(body)) {
