@@ -1,5 +1,10 @@
 # openrtk
 
+> **Platform support: Windows 11 x64 only.**
+> This fork is developed, packaged and verified on Windows 11 x64 with all four
+> companion plugins (`opencode-elf`, `opencode-mem`, `openrtk`, `caveman`)
+> enabled in the same OpenCode process. Linux and macOS are not supported.
+
 OpenCode plugin for [RTK](https://github.com/rtk-ai/rtk) (Rust Token Killer). Reduces LLM token consumption by 60-90% on common dev commands by transparently routing them through RTK's output compression.
 
 A lightweight OpenCode plugin that intercepts shell commands and pipes them through RTK for automatic output compression. The model sees full output while RTK handles token reduction behind the scenes — no changes needed to prompts or workflow.
@@ -69,7 +74,7 @@ docker ps        ->  rtk docker ps        (65% savings)
 | Git | status, diff, log, add, commit, push, pull, branch, fetch, stash, show |
 | GitHub CLI | pr, issue, run, api, release |
 | Rust | cargo test/build/clippy/check/install/fmt |
-| File ops | cat, grep, rg, ls, tree, find, diff |
+| File ops | cat, grep, rg (Windows: ls, tree, find, diff excluded) |
 | JS/TS | vitest, npm test/run, tsc, eslint, prettier, playwright, prisma |
 | Containers | docker (compose/ps/images/logs/run/build/exec), kubectl (get/logs/describe/apply) |
 | Network | curl, wget |
@@ -77,6 +82,8 @@ docker ps        ->  rtk docker ps        (65% savings)
 | Go | go test/build/vet, golangci-lint |
 | Elixir | mix (test/compile/credo/format/dialyzer/ecto), iex |
 | Packages | pnpm list/ls/outdated |
+
+**Windows note:** `ls`, `tree`, `find` and `diff` are **not** rewritten on Windows. In PowerShell these are aliases (`ls` -> `Get-ChildItem`, `diff` -> `Compare-Object`) or Windows tools with different names/syntax (`tree.com`, `find.exe`); the rtk proxy subcommands spawn the Unix binaries, which do not exist. Rewriting them would break commands that worked before. `cat`, `git`, `npm`, `docker` and the other real executables are still rewritten. `grep`/`rg` are rewritten only when the binary exists on `PATH` (rtk falls back to direct execution otherwise).
 
 ### System prompt
 
