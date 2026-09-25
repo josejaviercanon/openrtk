@@ -1,288 +1,324 @@
-import { describe, expect, test } from "bun:test"
+import assert from "node:assert/strict"
+import { copyFileSync, chmodSync, linkSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { delimiter, join } from "node:path"
+import { after, before, describe, test } from "node:test"
 import pluginDefault, { rtkPlugin } from "./index.js"
 import { rewrite } from "./rewrite.js"
 
 describe("rewrite", () => {
   describe("git commands", () => {
     test("rewrites git status", () => {
-      expect(rewrite("git status")).toBe("rtk git status")
+      assert.equal(rewrite("git status"), "rtk git status")
     })
 
     test("rewrites git status with flags", () => {
-      expect(rewrite("git status -s")).toBe("rtk git status -s")
+      assert.equal(rewrite("git status -s"), "rtk git status -s")
     })
 
     test("rewrites git diff", () => {
-      expect(rewrite("git diff")).toBe("rtk git diff")
+      assert.equal(rewrite("git diff"), "rtk git diff")
     })
 
     test("rewrites git log", () => {
-      expect(rewrite("git log --oneline -10")).toBe("rtk git log --oneline -10")
+      assert.equal(rewrite("git log --oneline -10"), "rtk git log --oneline -10")
     })
 
     test("rewrites git push", () => {
-      expect(rewrite("git push origin main")).toBe("rtk git push origin main")
+      assert.equal(rewrite("git push origin main"), "rtk git push origin main")
     })
 
     test("rewrites git commit", () => {
-      expect(rewrite('git commit -m "fix"')).toBe('rtk git commit -m "fix"')
+      assert.equal(rewrite('git commit -m "fix"'), 'rtk git commit -m "fix"')
     })
 
     test("rewrites git branch", () => {
-      expect(rewrite("git branch -a")).toBe("rtk git branch -a")
+      assert.equal(rewrite("git branch -a"), "rtk git branch -a")
     })
 
     test("rewrites git fetch", () => {
-      expect(rewrite("git fetch --all")).toBe("rtk git fetch --all")
+      assert.equal(rewrite("git fetch --all"), "rtk git fetch --all")
     })
 
     test("rewrites git stash", () => {
-      expect(rewrite("git stash pop")).toBe("rtk git stash pop")
+      assert.equal(rewrite("git stash pop"), "rtk git stash pop")
     })
 
     test("rewrites git show", () => {
-      expect(rewrite("git show HEAD")).toBe("rtk git show HEAD")
+      assert.equal(rewrite("git show HEAD"), "rtk git show HEAD")
     })
   })
 
   describe("github cli", () => {
     test("rewrites gh pr", () => {
-      expect(rewrite("gh pr list")).toBe("rtk gh pr list")
+      assert.equal(rewrite("gh pr list"), "rtk gh pr list")
     })
 
     test("rewrites gh issue", () => {
-      expect(rewrite("gh issue view 123")).toBe("rtk gh issue view 123")
+      assert.equal(rewrite("gh issue view 123"), "rtk gh issue view 123")
     })
 
     test("rewrites gh run", () => {
-      expect(rewrite("gh run list")).toBe("rtk gh run list")
+      assert.equal(rewrite("gh run list"), "rtk gh run list")
     })
 
     test("does not rewrite gh auth", () => {
-      expect(rewrite("gh auth login")).toBeNull()
+      assert.equal(rewrite("gh auth login"), null)
     })
   })
 
   describe("cargo commands", () => {
     test("rewrites cargo test", () => {
-      expect(rewrite("cargo test")).toBe("rtk cargo test")
+      assert.equal(rewrite("cargo test"), "rtk cargo test")
     })
 
     test("rewrites cargo build", () => {
-      expect(rewrite("cargo build --release")).toBe("rtk cargo build --release")
+      assert.equal(rewrite("cargo build --release"), "rtk cargo build --release")
     })
 
     test("rewrites cargo clippy", () => {
-      expect(rewrite("cargo clippy")).toBe("rtk cargo clippy")
+      assert.equal(rewrite("cargo clippy"), "rtk cargo clippy")
     })
   })
 
   describe("file operations", () => {
     test("rewrites cat to rtk read", () => {
-      expect(rewrite("cat README.md")).toBe("rtk read README.md")
+      assert.equal(rewrite("cat README.md"), "rtk read README.md")
     })
 
     test("rewrites grep", () => {
-      expect(rewrite("grep -r TODO src/")).toBe("rtk grep -r TODO src/")
+      assert.equal(rewrite("grep -r TODO src/"), "rtk grep -r TODO src/")
     })
 
     test("rewrites rg", () => {
-      expect(rewrite("rg pattern")).toBe("rtk rg pattern")
+      assert.equal(rewrite("rg pattern"), "rtk rg pattern")
     })
 
     test("rewrites ls", () => {
-      expect(rewrite("ls -la")).toBe("rtk ls -la")
+      assert.equal(rewrite("ls -la"), "rtk ls -la")
     })
 
     test("rewrites tree", () => {
-      expect(rewrite("tree src/")).toBe("rtk tree src/")
+      assert.equal(rewrite("tree src/"), "rtk tree src/")
     })
 
     test("rewrites find", () => {
-      expect(rewrite("find . -name '*.ts'")).toBe("rtk find . -name '*.ts'")
+      assert.equal(rewrite("find . -name '*.ts'"), "rtk find . -name '*.ts'")
     })
   })
 
   describe("js/ts tooling", () => {
     test("rewrites vitest", () => {
-      expect(rewrite("vitest run")).toBe("rtk vitest run")
+      assert.equal(rewrite("vitest run"), "rtk vitest run")
     })
 
     test("rewrites npx vitest", () => {
-      expect(rewrite("npx vitest")).toBe("rtk vitest run")
+      assert.equal(rewrite("npx vitest"), "rtk vitest run")
     })
 
     test("rewrites npm test", () => {
-      expect(rewrite("npm test")).toBe("rtk npm test")
+      assert.equal(rewrite("npm test"), "rtk npm test")
     })
 
     test("rewrites npm run", () => {
-      expect(rewrite("npm run build")).toBe("rtk npm build")
+      assert.equal(rewrite("npm run build"), "rtk npm build")
     })
 
     test("rewrites tsc", () => {
-      expect(rewrite("tsc --noEmit")).toBe("rtk tsc --noEmit")
+      assert.equal(rewrite("tsc --noEmit"), "rtk tsc --noEmit")
     })
 
     test("rewrites eslint", () => {
-      expect(rewrite("eslint src/")).toBe("rtk lint src/")
+      assert.equal(rewrite("eslint src/"), "rtk lint src/")
     })
 
     test("rewrites playwright", () => {
-      expect(rewrite("npx playwright test")).toBe("rtk playwright test")
+      assert.equal(rewrite("npx playwright test"), "rtk playwright test")
     })
   })
 
   describe("containers", () => {
     test("rewrites docker compose", () => {
-      expect(rewrite("docker compose up")).toBe("rtk docker compose up")
+      assert.equal(rewrite("docker compose up"), "rtk docker compose up")
     })
 
     test("rewrites docker ps", () => {
-      expect(rewrite("docker ps")).toBe("rtk docker ps")
+      assert.equal(rewrite("docker ps"), "rtk docker ps")
     })
 
     test("rewrites kubectl get", () => {
-      expect(rewrite("kubectl get pods")).toBe("rtk kubectl get pods")
+      assert.equal(rewrite("kubectl get pods"), "rtk kubectl get pods")
     })
   })
 
   describe("python", () => {
     test("rewrites pytest", () => {
-      expect(rewrite("pytest tests/")).toBe("rtk pytest tests/")
+      assert.equal(rewrite("pytest tests/"), "rtk pytest tests/")
     })
 
     test("rewrites python -m pytest", () => {
-      expect(rewrite("python -m pytest")).toBe("rtk pytest")
+      assert.equal(rewrite("python -m pytest"), "rtk pytest")
     })
 
     test("rewrites ruff check", () => {
-      expect(rewrite("ruff check .")).toBe("rtk ruff check .")
+      assert.equal(rewrite("ruff check ."), "rtk ruff check .")
     })
   })
 
   describe("go", () => {
     test("rewrites go test", () => {
-      expect(rewrite("go test ./...")).toBe("rtk go test ./...")
+      assert.equal(rewrite("go test ./..."), "rtk go test ./...")
     })
 
     test("rewrites go build", () => {
-      expect(rewrite("go build")).toBe("rtk go build")
+      assert.equal(rewrite("go build"), "rtk go build")
     })
   })
 
   describe("elixir / phoenix / ash", () => {
     test("rewrites mix phx.routes", () => {
-      expect(rewrite("mix phx.routes")).toBe("rtk --cache mix phx.routes")
+      assert.equal(rewrite("mix phx.routes"), "rtk --cache mix phx.routes")
     })
 
     test("rewrites mix ash.info", () => {
-      expect(rewrite("mix ash.info MyResource")).toBe("rtk --cache mix ash.info MyResource")
+      assert.equal(rewrite("mix ash.info MyResource"), "rtk --cache mix ash.info MyResource")
     })
 
     test("rewrites mix test", () => {
-      expect(rewrite("mix test")).toBe("rtk test mix test")
+      assert.equal(rewrite("mix test"), "rtk test mix test")
     })
 
     test("rewrites mix compile", () => {
-      expect(rewrite("mix compile")).toBe("rtk mix compile")
+      assert.equal(rewrite("mix compile"), "rtk mix compile")
     })
 
     test("rewrites mix ecto.migrate", () => {
-      expect(rewrite("mix ecto.migrate")).toBe("rtk mix ecto.migrate")
+      assert.equal(rewrite("mix ecto.migrate"), "rtk mix ecto.migrate")
     })
 
     test("rewrites mix ecto.migrations", () => {
-      expect(rewrite("mix ecto.migrations")).toBe("rtk mix ecto.migrations")
+      assert.equal(rewrite("mix ecto.migrations"), "rtk mix ecto.migrations")
     })
 
     test("rewrites generic mix commands", () => {
-      expect(rewrite("mix deps.get")).toBe("rtk mix deps.get")
+      assert.equal(rewrite("mix deps.get"), "rtk mix deps.get")
     })
 
     test("rewrites iex sessions", () => {
-      expect(rewrite("iex -S mix")).toBe("rtk iex -S mix")
+      assert.equal(rewrite("iex -S mix"), "rtk iex -S mix")
     })
 
     test("rewrites mix help", () => {
-      expect(rewrite("mix help phx.gen.html")).toBe("rtk --cache mix help phx.gen.html")
+      assert.equal(rewrite("mix help phx.gen.html"), "rtk --cache mix help phx.gen.html")
     })
   })
 
   describe("compound commands", () => {
     test("rewrites each && segment", () => {
-      expect(rewrite("git status && git diff")).toBe("rtk git status && rtk git diff")
+      assert.equal(rewrite("git status && git diff"), "rtk git status && rtk git diff")
     })
 
     test("leaves unsupported segments untouched", () => {
-      expect(rewrite("git stash && nix flake check && git stash pop")).toBe(
+      assert.equal(
+        rewrite("git stash && nix flake check && git stash pop"),
         "rtk git stash && nix flake check && rtk git stash pop",
       )
     })
 
     test("supports ||, ; and pipes", () => {
-      expect(rewrite("git fetch || git pull; ls | grep foo")).toBe(
+      assert.equal(
+        rewrite("git fetch || git pull; ls | grep foo"),
         "rtk git fetch || rtk git pull; rtk ls | rtk grep foo",
       )
     })
 
     test("does not split quoted separators", () => {
-      expect(rewrite('git commit -m "a && b"')).toBe('rtk git commit -m "a && b"')
+      assert.equal(rewrite('git commit -m "a && b"'), 'rtk git commit -m "a && b"')
     })
 
     test("honors backslash-escaped quotes", () => {
-      expect(rewrite('git commit -m "a \\" && b" && git status')).toBe(
+      assert.equal(
+        rewrite('git commit -m "a \\" && b" && git status'),
         'rtk git commit -m "a \\" && b" && rtk git status',
       )
     })
 
     test("rewrites env-prefixed segments", () => {
-      expect(rewrite("CI=true cargo test && git status")).toBe("CI=true rtk cargo test && rtk git status")
+      assert.equal(rewrite("CI=true cargo test && git status"), "CI=true rtk cargo test && rtk git status")
     })
 
     test("only skips the heredoc segment", () => {
-      expect(rewrite("git status && cat <<EOF")).toBe("rtk git status && cat <<EOF")
+      assert.equal(rewrite("git status && cat <<EOF"), "rtk git status && cat <<EOF")
     })
 
     test("skips segments already using rtk", () => {
-      expect(rewrite("rtk git status && git diff")).toBe("rtk git status && rtk git diff")
+      assert.equal(rewrite("rtk git status && git diff"), "rtk git status && rtk git diff")
     })
 
     test("returns null when no segment matches", () => {
-      expect(rewrite("echo hello && echo world")).toBeNull()
+      assert.equal(rewrite("echo hello && echo world"), null)
     })
   })
 
   describe("skip conditions", () => {
     test("skips commands already using rtk", () => {
-      expect(rewrite("rtk git status")).toBeNull()
+      assert.equal(rewrite("rtk git status"), null)
     })
 
     test("skips commands with heredocs", () => {
-      expect(rewrite("cat <<EOF\nhello\nEOF")).toBeNull()
+      assert.equal(rewrite("cat <<EOF\nhello\nEOF"), null)
     })
 
     test("skips unrecognized commands", () => {
-      expect(rewrite("echo hello")).toBeNull()
+      assert.equal(rewrite("echo hello"), null)
     })
   })
 
   describe("env prefix handling", () => {
     test("preserves env vars and rewrites command", () => {
-      expect(rewrite("CI=true cargo test")).toBe("CI=true rtk cargo test")
+      assert.equal(rewrite("CI=true cargo test"), "CI=true rtk cargo test")
     })
 
     test("preserves multiple env vars", () => {
-      expect(rewrite("FOO=1 BAR=2 git status")).toBe("FOO=1 BAR=2 rtk git status")
+      assert.equal(rewrite("FOO=1 BAR=2 git status"), "FOO=1 BAR=2 rtk git status")
     })
   })
 })
 
 describe("plugin entry points", () => {
+  // `setup` disables itself when `rtk` is missing from PATH, so provide a fake
+  // binary for the hook tests. On Windows a hardlink to the running node
+  // executable is used because `execFile` cannot resolve `.cmd` shims.
+  let originalPath: string | undefined
+  let fakeBinDir: string
+
+  before(() => {
+    fakeBinDir = mkdtempSync(join(tmpdir(), "openrtk-test-"))
+    const binary = join(fakeBinDir, process.platform === "win32" ? "rtk.exe" : "rtk")
+    if (process.platform === "win32") {
+      try {
+        linkSync(process.execPath, binary)
+      } catch {
+        copyFileSync(process.execPath, binary)
+      }
+    } else {
+      writeFileSync(binary, "#!/bin/sh\nexit 0\n")
+      chmodSync(binary, 0o755)
+    }
+
+    originalPath = process.env.PATH
+    process.env.PATH = fakeBinDir + delimiter + (originalPath ?? "")
+  })
+
+  after(() => {
+    process.env.PATH = originalPath
+    rmSync(fakeBinDir, { recursive: true, force: true })
+  })
+
   test("default export carries the openrtk id with v1 and v2 hooks", () => {
-    expect(pluginDefault.id).toBe("openrtk")
-    expect(typeof pluginDefault.setup).toBe("function")
-    expect(typeof pluginDefault.server).toBe("function")
+    assert.equal(pluginDefault.id, "openrtk")
+    assert.equal(typeof pluginDefault.setup, "function")
+    assert.equal(typeof pluginDefault.server, "function")
   })
 
   test("v2 setup rewrites shell commands", async () => {
@@ -297,7 +333,7 @@ describe("plugin entry points", () => {
 
     const event = { command: "git status && git diff" }
     await handler!(event)
-    expect(event.command).toBe("rtk git status && rtk git diff")
+    assert.equal(event.command, "rtk git status && rtk git diff")
   })
 
   test("v2 setup leaves unknown commands alone", async () => {
@@ -312,7 +348,7 @@ describe("plugin entry points", () => {
 
     const event = { command: "echo hello" }
     await handler!(event)
-    expect(event.command).toBe("echo hello")
+    assert.equal(event.command, "echo hello")
   })
 
   test("v2 setup stays quiet without the rtk binary", async () => {
@@ -327,7 +363,7 @@ describe("plugin entry points", () => {
           },
         },
       } as never)
-      expect(registered).toBe(false)
+      assert.equal(registered, false)
     } finally {
       process.env.PATH = path
     }
@@ -342,7 +378,7 @@ describe("plugin entry points", () => {
 
     const output = { args: { command: "git status" } }
     await hooks["tool.execute.before"]({ tool: "bash" }, output)
-    expect(output.args.command).toBe("rtk git status")
+    assert.equal(output.args.command, "rtk git status")
   })
 
   test("v1 server ignores other tools", async () => {
@@ -354,6 +390,6 @@ describe("plugin entry points", () => {
 
     const output = { args: { command: "git status" } }
     await hooks["tool.execute.before"]({ tool: "read" }, output)
-    expect(output.args.command).toBe("git status")
+    assert.equal(output.args.command, "git status")
   })
 })

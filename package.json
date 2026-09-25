@@ -1,18 +1,23 @@
 {
   "name": "openrtk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenCode plugin for RTK (Rust Token Killer) - reduces LLM token consumption by 60-90% on dev commands",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "files": [
+    "src",
     "lib",
+    "scripts/install-local.mjs",
     "opencode.md"
   ],
   "scripts": {
     "build": "tsc",
-    "bundle": "bun build src/index.ts --outfile dist/openrtk.js --target bun",
-    "test": "bun test",
+    "bundle": "esbuild src/index.ts --bundle --format=esm --platform=node --outfile=dist/openrtk.js",
+    "test": "tsc -p tsconfig.test.json && node --test test-lib/index.test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -26,11 +31,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/martinstannard/openrtk"
+    "url": "https://github.com/josejaviercanon/openrtk"
   },
   "devDependencies": {
-    "@opencode/plugin": "^2.0.5",
+    "@opencode/plugin": "^2.0.16",
     "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
     "typescript": "^5.0.0"
   }
 }

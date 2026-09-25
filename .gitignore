@@ -1,5 +1,7 @@
 node_modules
 lib
 dist
+test-lib
+*.tgz
 bun.lock
 .env

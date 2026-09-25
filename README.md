@@ -14,21 +14,31 @@ cargo install --git https://github.com/rtk-ai/rtk
 
 ## Installation
 
-No npm release needed. Copy `src/index.ts` and `src/rewrite.ts` into a plugin
-directory:
+The plugin supports OpenCode 2 (`setup`/`ctx.shell.hook("create.before")`) and falls back to OpenCode 1 (`server`/`tool.execute.before`). It has no runtime dependencies, so OpenCode loads `src/index.ts` directly — no build and no `npm install` on the target machine.
 
-- `~/.config/opencode/plugins/` to cover every project
-- `.opencode/plugins/` to cover one project
+### Offline package (recommended for other local machines)
 
-then restart OpenCode. If `"openrtk"` sits in the `plugin` array in
-`opencode.json`, remove it, or the old npm release loads next to the
-local copy and every command gets rewritten twice.
+```bash
+npm pack                     # produces openrtk-0.2.0.tgz
+tar -xzf openrtk-0.2.0.tgz
+node package/scripts/install-local.mjs
+```
 
-To refresh the installed copy after editing the source, run
-`bun run bundle` and copy `dist/openrtk.js` over the file in the
-plugin directory. The bundle step matters because OpenCode loads each
-file in that directory as its own plugin, so the two source files must
-ship as one.
+The script copies the plugin into `~/.config/opencode/plugins/openrtk/`, where OpenCode discovers it automatically for every project. Set `XDG_CONFIG_HOME` or `OPENCODE_CONFIG_DIR` to install somewhere else.
+
+### Managed Git install
+
+```bash
+opencode plugin add github:josejaviercanon/openrtk
+```
+
+OpenCode installs and updates the plugin from the repository. Requires git and network access on the target machine.
+
+### Manual copy
+
+Copy this repository into `~/.config/opencode/plugins/openrtk/` (global) or `.opencode/plugins/openrtk/` (one project), then restart OpenCode.
+
+Do not also list `openrtk` or `opencode-rtk` in the `plugins` array of `opencode.json(c)`: a second copy loads next to the local one and every command is processed twice. If the V1-only `opencode-rtk` package is present from an older setup, remove it — it fails to load on OpenCode 2.
 
 ## How it works
 
@@ -63,9 +73,13 @@ Copy `opencode.md` into your project or user config to teach the model about `rt
 ## Development
 
 ```bash
-npm run build     # build the plugin
-npm test          # run tests
+npm install       # development dependencies
+npm test          # compile with tsc and run node:test
+npm run build     # emit lib/ with declarations (optional)
+npm run bundle    # emit a single-file dist/openrtk.js with esbuild
 ```
+
+`npm test` writes compiled test output to `test-lib/` and runs it with Node's built-in test runner, so no extra test framework is required.
 
 ## License
 
